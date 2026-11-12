@@ -38,3 +38,11 @@ Sprungtaste halten = höher springen. `Esc`/`P` pausiert.
 | `sw.js`, `manifest.webmanifest`, `icon.svg` | Offline-Fähigkeit / installierbare Web-App |
 
 Die Physik läuft mit festem Zeitschritt (120 Hz) und ist dadurch auf allen Geräten gleich schnell.
+
+## Deployment auf Vercel
+
+1. Auf vercel.com → **Add New… → Project** → Repo `justnils/abi` importieren
+2. **Root Directory** auf `volley` setzen, Framework Preset „Other“, kein Build-Befehl
+3. **Deploy** – fertig. Jeder Push auf den Branch aktualisiert die Seite automatisch.
+
+Alternativ per CLI: `cd volley && npx vercel --prod`
