@@ -1,0 +1,15 @@
+{
+  "name": "Wabbel Volley",
+  "short_name": "Wabbel Volley",
+  "description": "Strand-Volleyball mit Wackelpudding-Physik – für Handy und Desktop.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f1830",
+  "theme_color": "#1b2a4a",
+  "lang": "de",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

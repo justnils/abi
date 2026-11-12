@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1b2a4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Wabbel Volley</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root { --ui: #1b2a4a; --accent: #ffcf3f; --accent2: #2ec4b6; --text: #fff; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #0f1830; color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden;
+    touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #stage { position: relative; }
+  canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }
+
+  /* Touch-Steuerung */
+  #pads { display: none; width: 100%; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 10px 16px; pointer-events: none; }
+  body.touch #pads { display: flex; }
+  body.touch.landscape #pads { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px calc(16px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+  .pad { display: flex; gap: 10px; pointer-events: auto; }
+  .btn { width: 72px; height: 72px; border-radius: 50%; border: 2px solid rgba(255,255,255,.45); background: rgba(20,30,60,.38);
+    color: #fff; font-size: 30px; display: grid; place-items: center; backdrop-filter: blur(2px); touch-action: none; }
+  .btn.on { background: rgba(255,207,63,.55); border-color: var(--accent); }
+  .btn.jump { width: 84px; height: 84px; font-size: 18px; font-weight: 700; }
+  body.portrait .btn { width: 84px; height: 84px; }
+  body.portrait .btn.jump { width: 100px; height: 100px; }
+  .pad.p2, .btn.duo { display: none; }
+  body.two .pad.p2, body.two .btn.duo { display: grid; }
+  body.two .pad.p2 { display: flex; }
+  body.two .pad.p1solo { display: none; }
+  body.two .pad.p1 .btn, body.two .pad.p2 .btn { width: 60px; height: 60px; font-size: 24px; }
+  body.two .pad .btn.jump { width: 66px; height: 66px; font-size: 14px; }
+
+  #pauseBtn { position: absolute; top: 6px; right: 50%; transform: translateX(50%); width: 34px; height: 34px; border-radius: 50%;
+    border: 0; background: rgba(0,0,0,.25); color: #fff; font-size: 14px; display: none; cursor: pointer; }
+  body.playing #pauseBtn { display: block; }
+
+  /* Menüs */
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(10,18,40,.55); backdrop-filter: blur(3px); z-index: 10; }
+  .overlay.show { display: flex; }
+  .card { background: var(--ui); border-radius: 18px; padding: 22px 22px 18px; width: min(420px, 100%); max-height: 100%; overflow: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45); text-align: center; }
+  h1 { margin: 0 0 4px; font-size: 34px; letter-spacing: .5px; color: var(--accent); }
+  h1 span { color: var(--accent2); }
+  h2 { margin: 0 0 12px; font-size: 26px; }
+  .sub { margin: 0 0 18px; opacity: .75; font-size: 14px; }
+  .menu-btn { display: block; width: 100%; margin: 8px 0; padding: 14px; border-radius: 12px; border: 0; font-size: 17px; font-weight: 700;
+    background: var(--accent); color: #1b2a4a; cursor: pointer; }
+  .menu-btn.alt { background: rgba(255,255,255,.12); color: #fff; }
+  .row { display: flex; gap: 6px; margin: 8px 0; }
+  .row button { flex: 1; padding: 10px 4px; border-radius: 10px; border: 2px solid rgba(255,255,255,.2); background: transparent; color: #fff;
+    font-size: 14px; cursor: pointer; }
+  .row button.sel { border-color: var(--accent2); background: rgba(46,196,182,.22); }
+  .label { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .65; margin-top: 12px; }
+  .help { font-size: 13px; opacity: .7; margin-top: 14px; line-height: 1.5; }
+  kbd { background: rgba(255,255,255,.15); border-radius: 4px; padding: 1px 6px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <button id="pauseBtn" aria-label="Pause">❚❚</button>
+  </div>
+  <div id="pads">
+    <div class="pad p1">
+      <div class="btn" data-p="0" data-k="left">◀</div>
+      <div class="btn" data-p="0" data-k="right">▶</div>
+      <div class="btn jump duo" data-p="0" data-k="jump">HOPP</div>
+    </div>
+    <div class="pad p1solo">
+      <div class="btn jump" data-p="0" data-k="jump">HOPP</div>
+    </div>
+    <div class="pad p2">
+      <div class="btn jump" data-p="1" data-k="jump">HOPP</div>
+      <div class="btn" data-p="1" data-k="left">◀</div>
+      <div class="btn" data-p="1" data-k="right">▶</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay show" id="menu">
+  <div class="card">
+    <h1>Wabbel<span>Volley</span></h1>
+    <p class="sub">Strand-Volleyball mit Wackelpudding-Physik</p>
+    <button class="menu-btn" id="btn1p">1 Spieler vs. Computer</button>
+    <button class="menu-btn alt" id="btn2p">2 Spieler (ein Gerät)</button>
+    <div class="label">Computer-Stärke</div>
+    <div class="row" id="lvl">
+      <button data-v="leicht">Leicht</button><button data-v="mittel" class="sel">Mittel</button><button data-v="schwer">Schwer</button>
+    </div>
+    <div class="label">Punkte zum Sieg</div>
+    <div class="row" id="pts">
+      <button data-v="5">5</button><button data-v="10">10</button><button data-v="15" class="sel">15</button><button data-v="25">25</button>
+    </div>
+    <div class="label">Ton</div>
+    <div class="row" id="snd"><button data-v="1" class="sel">An</button><button data-v="0">Aus</button></div>
+    <div class="help" id="helpKeys">
+      Links: <kbd>A</kbd> <kbd>D</kbd> laufen, <kbd>W</kbd> springen<br>
+      Rechts: <kbd>←</kbd> <kbd>→</kbd> laufen, <kbd>↑</kbd> springen<br>
+      Im 1-Spieler-Modus gehen beide · <kbd>Esc</kbd>/<kbd>P</kbd> Pause<br>
+      Max. 3 Berührungen pro Seite · Sieg mit 2 Punkten Vorsprung
+    </div>
+    <div class="help" id="helpTouch" style="display:none">
+      ◀ ▶ laufen, <b>HOPP</b> springen (halten = höher)<br>
+      Tipp: Handy quer halten für das größte Spielfeld<br>
+      Max. 3 Berührungen pro Seite · Sieg mit 2 Punkten Vorsprung
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pause">
+  <div class="card">
+    <h2>Pause</h2>
+    <button class="menu-btn" id="btnResume">Weiter</button>
+    <button class="menu-btn alt" id="btnQuit">Hauptmenü</button>
+  </div>
+</div>
+
+<div class="overlay" id="over">
+  <div class="card">
+    <h2 id="overTitle">Sieg!</h2>
+    <p class="sub" id="overScore"></p>
+    <button class="menu-btn" id="btnAgain">Revanche</button>
+    <button class="menu-btn alt" id="btnMenu">Hauptmenü</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
